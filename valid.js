@@ -45,53 +45,66 @@ Validator.prototype.add = function(dom, rules) {
         // 私有的部分是规则内部的解析参数
         var strategArr = rule.stratege.split(":");
         var errMsg = rule.errMsg;
-        var result
-          // 将验证的函数放到cache里面
+        var result;
+        var ifInit = true;
+        var stra;
+        // 将验证的函数放到cache里面
         this.cache.push(function() {
           // 组装参数列表 这里的function都是闭包 里面的变量都不会被销毁
-          var stra = strategArr.shift();
-          strategArr.push(errMsg);
+          if (ifInit) {
+            stra = strategArr.shift();
+            strategArr.push(errMsg);
+            ifInit = false;
+          }
           strategArr.unshift(dom.value);
+          console.log(stra, strategArr)
           return result = strategies[stra].apply(dom, strategArr);
+
         }.after(function(result) {
-          console.log(errMsg, result)
+          // console.log(errMsg, result)
           if (result == undefined) {
             dom.nextSibling.innerHTML = "";
           } else {
             dom.nextSibling.innerHTML = result;
           }
+          strategArr.shift()
         }))
       }.bind(this))(rule)
     }
   }
   // 验证开始
 Validator.prototype.start = function() {
-    for (var j = 0, validaFunc; validaFunc = this.cache[j++];) {
-      var err = validaFunc();
+    var ifValidate = false;
+    for (var j = 0, validaFuncc; validaFuncc = this.cache[j++];) {
+      var err = validaFuncc();
+      // console.log(err)
       if (err) {
+        // ifValidate = true;
         return err;
       }
     }
+    // return ifValidate;
   }
   // 客户端调用
 var registerForm = document.getElementById('registerForm');
+var validator = new Validator();
+validator.add(registerForm.userName, [{
+  stratege: 'isNonEmpty',
+  errMsg: '用户名不能为空'
+}, {
+  stratege: 'minLength:10',
+  errMsg: '用户名长度不能小于10 位'
+}]);
+validator.add(registerForm.passWord, [{
+  stratege: 'minLength:7',
+  errMsg: '密码长度不能小于7 位'
+}]);
+validator.add(registerForm.phoneNumber, [{
+  stratege: 'isMobile',
+  errMsg: '手机号码格式不正确'
+}]);
+
 var validataFunc = function() {
-  var validator = new Validator();
-  validator.add(registerForm.userName, [{
-    stratege: 'isNonEmpty',
-    errMsg: '用户名不能为空'
-  }, {
-    stratege: 'minLength:10',
-    errMsg: '用户名长度不能小于10 位'
-  }]);
-  validator.add(registerForm.passWord, [{
-    stratege: 'minLength:7',
-    errMsg: '密码长度不能小于7 位'
-  }]);
-  validator.add(registerForm.phoneNumber, [{
-    stratege: 'isMobile',
-    errMsg: '手机号码格式不正确'
-  }]);
   var errorMsg = validator.start();
   return errorMsg;
 }
